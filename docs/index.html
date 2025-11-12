@@ -1,1 +1,639 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карточный Органайзер</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        /* Search */
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Cards */
+        .cards-container {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 80px;
+        }
+
+        .card-item {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 6px solid #4ECDC4;
+            cursor: pointer;
+        }
+
+        .card-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .store-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .card-type {
+            background: #e2e8f0;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #4a5568;
+        }
+
+        .card-number {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .card-notes {
+            color: #4a5568;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            color: white;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        .empty-state p {
+            opacity: 0.8;
+        }
+
+        /* Add Card Button */
+        .add-card-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .add-card-btn:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 0;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2d3748;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #718096;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #2d3748;
+        }
+
+        /* Form */
+        .card-form {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Color Picker */
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: transform 0.2s;
+        }
+
+        .color-option.active {
+            border-color: #2d3748;
+            transform: scale(1.1);
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+
+        /* Form Actions */
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+            
+            .modal-content {
+                width: 95%;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>💳 Мой карточный органайзер</h1>
+            <p>Храните все карты в одном месте</p>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="🔍 Поиск карт..." class="search-input">
+        </div>
+
+        <!-- Cards List -->
+        <div class="cards-container" id="cardsContainer">
+            <!-- Cards will be rendered here dynamically -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+            <div class="empty-icon">💳</div>
+            <h3>Карт пока нет</h3>
+            <p>Добавьте свою первую карту</p>
+        </div>
+
+        <!-- Add Card Button -->
+        <button class="add-card-btn" id="addCardBtn">
+            <span>+ Добавить карту</span>
+        </button>
+    </div>
+
+    <!-- Add Card Modal -->
+    <div class="modal" id="addCardModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Добавить карту</h3>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            
+            <form id="cardForm" class="card-form">
+                <div class="form-group">
+                    <label for="storeName">Магазин/Сеть *</label>
+                    <input type="text" id="storeName" required placeholder="Например: Пятерочка">
+                </div>
+
+                <div class="form-group">
+                    <label for="cardNumber">Номер карты (последние 4 цифры)</label>
+                    <input type="text" id="cardNumber" maxlength="4" placeholder="1234">
+                </div>
+
+                <div class="form-group">
+                    <label for="cardType">Тип карты</label>
+                    <select id="cardType">
+                        <option value="discount">Дисконтная</option>
+                        <option value="bonus">Бонусная</option>
+                        <option value="gift">Подарочная</option>
+                        <option value="other">Другая</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="cardColor">Цвет карты</label>
+                    <div class="color-picker">
+                        <div class="color-option active" data-color="#FF6B6B" style="background-color: #FF6B6B;"></div>
+                        <div class="color-option" data-color="#4ECDC4" style="background-color: #4ECDC4;"></div>
+                        <div class="color-option" data-color="#45B7D1" style="background-color: #45B7D1;"></div>
+                        <div class="color-option" data-color="#96CEB4" style="background-color: #96CEB4;"></div>
+                        <div class="color-option" data-color="#FFEAA7" style="background-color: #FFEAA7;"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Заметки</label>
+                    <textarea id="notes" placeholder="Дополнительная информация..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancelBtn">Отмена</button>
+                    <button type="submit" class="btn-primary">Сохранить карту</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Telegram Web App initialization
+        const tg = window.Telegram?.WebApp;
+        
+        if (tg) {
+            tg.expand();
+            tg.enableClosingConfirmation();
+            tg.setHeaderColor('#667eea');
+            tg.setBackgroundColor('#667eea');
+        }
+
+        // State management
+        let cards = JSON.parse(localStorage.getItem('cards')) || [];
+        let selectedColor = '#FF6B6B';
+
+        // DOM Elements
+        const cardsContainer = document.getElementById('cardsContainer');
+        const emptyState = document.getElementById('emptyState');
+        const addCardBtn = document.getElementById('addCardBtn');
+        const addCardModal = document.getElementById('addCardModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const cardForm = document.getElementById('cardForm');
+        const searchInput = document.getElementById('searchInput');
+        const colorOptions = document.querySelectorAll('.color-option');
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            renderCards();
+            setupEventListeners();
+            updateEmptyState();
+        });
+
+        // Event Listeners
+        function setupEventListeners() {
+            addCardBtn.addEventListener('click', openAddCardModal);
+            closeModalBtn.addEventListener('click', closeAddCardModal);
+            cancelBtn.addEventListener('click', closeAddCardModal);
+            cardForm.addEventListener('submit', handleCardSubmit);
+            searchInput.addEventListener('input', handleSearch);
+            
+            // Color picker
+            colorOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    selectedColor = this.getAttribute('data-color');
+                    colorOptions.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // Close modal on backdrop click
+            addCardModal.addEventListener('click', function(e) {
+                if (e.target === addCardModal) {
+                    closeAddCardModal();
+                }
+            });
+        }
+
+        // Modal functions
+        function openAddCardModal() {
+            addCardModal.classList.add('show');
+            cardForm.reset();
+            // Reset to default color
+            selectedColor = '#FF6B6B';
+            colorOptions.forEach(opt => opt.classList.remove('active'));
+            colorOptions[0].classList.add('active');
+        }
+
+        function closeAddCardModal() {
+            addCardModal.classList.remove('show');
+        }
+
+        // Form submission
+        function handleCardSubmit(e) {
+            e.preventDefault();
+            
+            const storeName = document.getElementById('storeName').value.trim();
+            const cardNumber = document.getElementById('cardNumber').value.trim();
+            const cardType = document.getElementById('cardType').value;
+            const notes = document.getElementById('notes').value.trim();
+            
+            if (!storeName) {
+                alert('Пожалуйста, введите название магазина');
+                return;
+            }
+            
+            const newCard = {
+                id: Date.now().toString(),
+                storeName: storeName,
+                cardNumber: cardNumber ? `****${cardNumber}` : '****',
+                cardType: cardType,
+                color: selectedColor,
+                notes: notes,
+                createdAt: new Date().toISOString()
+            };
+            
+            cards.unshift(newCard);
+            saveCards();
+            renderCards();
+            updateEmptyState();
+            closeAddCardModal();
+            
+            // Show success feedback
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('soft');
+            }
+        }
+
+        // Search functionality
+        function handleSearch() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            renderCards(searchTerm);
+        }
+
+        // Render cards
+        function renderCards(searchTerm = '') {
+            cardsContainer.innerHTML = '';
+            
+            const filteredCards = searchTerm 
+                ? cards.filter(card => 
+                    card.storeName.toLowerCase().includes(searchTerm) ||
+                    (card.notes && card.notes.toLowerCase().includes(searchTerm)) ||
+                    card.cardType.toLowerCase().includes(searchTerm))
+                : cards;
+            
+            if (filteredCards.length === 0 && searchTerm) {
+                cardsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <h3>Ничего не найдено</h3>
+                        <p>Попробуйте изменить поисковый запрос</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredCards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card-item';
+                cardElement.style.borderLeftColor = card.color;
+                cardElement.innerHTML = `
+                    <div class="card-header">
+                        <div class="store-name">${escapeHtml(card.storeName)}</div>
+                        <div class="card-type">${getCardTypeText(card.cardType)}</div>
+                    </div>
+                    <div class="card-number">${card.cardNumber}</div>
+                    ${card.notes ? `<div class="card-notes">${escapeHtml(card.notes)}</div>` : ''}
+                `;
+                
+                // Add click handler for card editing
+                cardElement.addEventListener('click', () => editCard(card.id));
+                
+                cardsContainer.appendChild(cardElement);
+            });
+            
+            updateEmptyState();
+        }
+
+        // Card editing (simplified - in MVP just delete and re-add)
+        function editCard(cardId) {
+            if (confirm('Хотите удалить эту карту?')) {
+                cards = cards.filter(card => card.id !== cardId);
+                saveCards();
+                renderCards();
+                updateEmptyState();
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+            }
+        }
+
+        // Utility functions
+        function updateEmptyState() {
+            const hasCards = cards.length > 0;
+            const hasSearchTerm = searchInput.value.trim() !== '';
+            
+            if (!hasCards && !hasSearchTerm) {
+                emptyState.classList.remove('hidden');
+                cardsContainer.classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                cardsContainer.classList.remove('hidden');
+            }
+        }
+
+        function saveCards() {
+            localStorage.setItem('cards', JSON.stringify(cards));
+        }
+
+        function getCardTypeText(type) {
+            const types = {
+                'discount': 'Дисконтная',
+                'bonus': 'Бонусная', 
+                'gift': 'Подарочная',
+                'other': 'Другая'
+            };
+            return types[type] || 'Другая';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
